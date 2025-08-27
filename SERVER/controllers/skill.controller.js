@@ -2,57 +2,61 @@ const pool = require("../config/db");
 
 const createSkill = async (req, res) => {
   try {
-    const { title, xp } = req.body;
+    const title = req.body.title?.trim();
+    const xp = req.body.xp;
     if (!title) {
       return res.status(400).json({
-        error: "Missing required fields",
+        success: false,
+        message: "Missing required fields",
       });
     }
     const values = [title];
-    let insertQuerySkill = ``;
-    if (xp != null) {
-      insertQuerySkill = `
-    INSERT INTO skills (title,xp) 
-    VALUES ($1,$2)
-    RETURNING *`;
-      values.push(xp);
-    } else {
-      insertQuerySkill = `
-    INSERT INTO skills (title) 
-    VALUES ($1)
-    RETURNING *`;
-    }
+    let insertQuerySkill =
+      xp != null
+        ? `INSERT INTO skills (title,xp) VALUES ($1,$2) RETURNING *`
+        : `INSERT INTO skills (title)  VALUES ($1) RETURNING *`;
+    if (xp != null) values.push(xp);
     const result = await pool.query(insertQuerySkill, values);
+    const skill = result.rows[0];
     return res.status(201).json({
+      success: true,
       message: "Skill inserted successfully",
-      Skill: result.rows[0],
+      skill,
     });
-  } catch (err) {
-    return res.status(500).json({ error: err.message });
+  } catch (error) {
+    console.error("Error inserting skill:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
   }
 };
 const updateSkill = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, xp } = req.body;
-    if (!id || isNaN(id)) {
+    const title = req.body.title?.trim();
+    const xp = req.body.xp;
+    if (!id) {
       return res.status(400).json({
-        error: "Invalid skill ID",
+        success: false,
+        message: "Invalid skill ID",
       });
     }
     const skillQuery = `SELECT * FROM skills WHERE skill_id=$1`;
     const skillQueryResult = await pool.query(skillQuery, [id]);
     if (skillQueryResult.rowCount === 0) {
-      res.status(404).json({
-        error: "Skill not found",
+      return res.status(404).json({
+        success: false,
+        message: "Skill not found",
       });
     }
+    const skill = skillQueryResult.rows[0];
     const fields = [];
     const values = [id];
-    let counter = 2;
     const unChanged = {};
+    let counter = 2;
     if (title !== undefined) {
-      if (title === skillQueryResult.rows[0].title) {
+      if (title === skill.title) {
         unChanged["title"] =
           "Title is already the current one, Nothing changed";
       } else {
@@ -61,15 +65,18 @@ const updateSkill = async (req, res) => {
       }
     }
     if (xp !== undefined) {
-      if (xp === skillQueryResult.rows[0].xp) {
+      if (xp === skill.xp) {
         unChanged["xp"] = "XP is already the current one, Nothing changed";
+      } else {
+        fields.push(`xp=$${counter++}`);
+        values.push(xp);
       }
-      fields.push(`xp=$${counter++}`);
-      values.push(xp);
     }
     if (fields.length === 0) {
-      res.status(400).json({
-        error: "No changes detected",
+      return res.status(200).json({
+        success: true,
+        message: "No changes detected",
+        skill,
       });
     }
     const updateQuery = `
@@ -78,15 +85,18 @@ const updateSkill = async (req, res) => {
     WHERE skill_id=$1
     RETURNING *`;
     const result = await pool.query(updateQuery, values);
-
-    res.status(200).json({
-      message: "Data updated successfully",
-      updatedSkill: result.rows[0],
+    const updatedSkill = result.rows[0];
+    return res.status(200).json({
+      success: true,
+      message: "Skill data updated successfully",
+      updatedSkill,
       unChanged,
     });
-  } catch (err) {
-    res.status(500).json({
-      error: err.message,
+  } catch (error) {
+    console.error("Error updating skill:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
     });
   }
 };
@@ -94,26 +104,29 @@ const fetchSkills = async (req, res) => {
   try {
     const fetchQuery = `SELECT * FROM skills`;
     const result = await pool.query(fetchQuery);
-    if (result.rowCount === 0) {
-      return res.status(404).json({
-        error: "Skills not inserted",
-      });
-    }
+    const skills = result.rows;
     return res.status(200).json({
-      Skills: result.rows,
+      success: true,
+      message: skills.length
+        ? "Skills fetched successfully"
+        : "No skills available yet",
+      skills,
     });
-  } catch (err) {
+  } catch (error) {
+    console.error("Error fetching skills:", error);
     return res.status(500).json({
-      error: err.message,
+      success: false,
+      message: "Internal server error",
     });
   }
 };
 const fetchSkillById = async (req, res) => {
   try {
     const { id } = req.params;
-    if (!id || isNaN(id)) {
+    if (!id) {
       return res.status(400).json({
-        error: "Invalid skill ID",
+        success: false,
+        message: "Invalid skill ID",
       });
     }
     const fetchQuery = `
@@ -123,24 +136,31 @@ const fetchSkillById = async (req, res) => {
     const result = await pool.query(fetchQuery, [id]);
     if (result.rowCount === 0) {
       return res.status(404).json({
-        error: "Skill not found",
+        success: false,
+        message: "Skill not found",
       });
     }
+    const skill = result.rows[0];
     return res.status(200).json({
-      Skill: result.rows[0],
+      success: true,
+      message: "Skill fetched successfully",
+      skill,
     });
-  } catch (err) {
+  } catch (error) {
+    console.error("Error fetching skill:", error);
     return res.status(500).json({
-      error: err.message,
+      success: false,
+      message: "Internal server error",
     });
   }
 };
 const deleteSkill = async (req, res) => {
   try {
     const { id } = req.params;
-    if (!id || isNaN(id)) {
+    if (!id) {
       return res.status(400).json({
-        error: "Invalid skill ID",
+        success: false,
+        message: "Invalid skill ID",
       });
     }
     const deleteQuery = `
@@ -150,15 +170,20 @@ const deleteSkill = async (req, res) => {
     const result = await pool.query(deleteQuery, [id]);
     if (result.rowCount === 0)
       return res.status(404).json({
-        error: "Skill not found",
+        success: false,
+        message: "Skill not found",
       });
+    const deletedSkill = result.rows[0];
     return res.status(200).json({
+      success: true,
       message: "Skill deleted successfully",
-      Skill: result.rows[0],
+      deletedSkill,
     });
-  } catch (err) {
+  } catch (error) {
+    console.error("Error deleting skill:", error);
     return res.status(500).json({
-      error: err.message,
+      success: false,
+      message: "Internal server error",
     });
   }
 };

@@ -15,7 +15,7 @@ const createLesson = async (req, res) => {
     } = req.body;
 
     const newLesson = await pool.query(
-      "INSERT INTO lessons ( lesson_id, title,content_documented,course_id,quiz_id,xp,content_video) vlauses($1, $2, $3, $4, $5, $6, $7)",
+      "INSERT INTO lessons ( lesson_id, title,content_documented,course_id,quiz_id,xp,content_video) values($1, $2, $3, $4, $5, $6, $7)",
       [
         lesson_id,
         title,
@@ -52,7 +52,7 @@ const getLessonById = async (req, res) => {
   try {
     const { lesson_id } = req.params;
     const lesson = await pool.query(
-      "SELECT * FROOM lessons WHERE lesson_id=$1",
+      "SELECT * FROM lessons WHERE lesson_id=$1",
       [lesson_id]
     );
 
@@ -74,7 +74,7 @@ const updateLesson = async (req, res) => {
       req.body;
 
     const lesson = await pool.query(
-      "UPDATE lessons SET title=$1, content_documented=$2, course_id=$3, quiz_id=$4, xp=$5, content_video=$6 WHERE lesson_id = $7 RETURNING*",
+      "UPDATE lessons SET title=$1, content_documented=$2, course_id=$3, quiz_id=$4, xp=$5, content_video=$6 WHERE lesson_id = $7 RETURNING *",
       [
         title,
         content_documented,
@@ -99,9 +99,11 @@ const updateLesson = async (req, res) => {
 const deleteLesson = async (req,res) => {
     try {
         const {lesson_id} = req.params;
-        const lesson = await pool.query("DELETE FROM lessons WHERE lesson_id=$1", [lesson_id])
+        const lesson = await pool.query("DELETE FROM lessons WHERE lesson_id=$1 RETURNING *", [lesson_id])
         res.status();
     } catch (error) {
         
     }
-}
+};
+
+

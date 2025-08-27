@@ -1,0 +1,13 @@
+const express = require("express");
+const router = express.Router();
+const controller = require("../controllers/user.controller");
+const { checkAdmin } = require("../middleware/admin.middleware");
+router.get("/fetchUsers", checkAdmin, controller.fetchUsers);
+router.get("/fetchUser/:id", checkAdmin, controller.fetchUserById);
+router.post("/createUser", checkAdmin, controller.createUser);
+router.delete("/deleteUser/:id", checkAdmin, controller.deleteUser);
+router.patch("/updateUser/:id", checkAdmin, controller.updateUser);
+router.get("/skills", controller.fetchUserSkills);
+router.post("/addSkill/:skillId", controller.addUserSkill);
+router.delete("/deleteSkill/:skillId", controller.deleteUserSkill);
+module.exports = router;

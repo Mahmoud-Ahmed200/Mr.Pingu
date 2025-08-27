@@ -6,5 +6,4 @@ router.patch("/updateSkill/:id", controller.updateSkill);
 router.get("/fetchSkills", controller.fetchSkills);
 router.get("/fetchSkill/:id", controller.fetchSkillById);
 router.delete("/deleteSkill/:id", controller.deleteSkill);
-
 module.exports = router;
