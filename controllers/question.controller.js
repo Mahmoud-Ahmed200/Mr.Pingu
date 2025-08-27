@@ -200,10 +200,197 @@ const deleteQuestion = async (req, res) => {
     });
   }
 };
+const createQuestionOption = async (req, res) => {
+  try {
+    const id = req.params.id;
+    const optionText = req.body.optionText?.trim();
+    const isCorrect = req.body.isCorrect;
+    if (!validator.isUUID(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid question id",
+      });
+    }
+    if (!optionText) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required fields",
+      });
+    }
+    const values = [id, optionText];
+    if (isCorrect !== undefined) values.push(isCorrect);
+    const createQuestionOptionQuery =
+      isCorrect !== undefined
+        ? `insert into question_option (question_id,option_text,is_correct)
+    VALUES($1,$2,$3)
+    RETURNING *`
+        : `insert into question_option(question_id,option_text)
+    VALUES($1,$2)
+    RETURNING *`;
+    const result = await pool.query(createQuestionOptionQuery, values);
+    if (result.rowCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Question not found",
+      });
+    }
+    const questionOption = result.rows[0];
+    return res.status(201).json({
+      success: true,
+      message: "Question option created successfully",
+      questionOption,
+    });
+  } catch (error) {
+    if (error.code === "23505") {
+      if (error.detail.includes("option_text")) {
+        return res.status(400).json({
+          success: false,
+          message: "Option is already exist",
+        });
+      }
+    }
+    if (error.code === "23503") {
+      return res.status(404).json({
+        success: false,
+        message: "Question not found",
+      });
+    }
+    console.error("Error creating question option: ", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+const fetchQuestionOptions = async (req, res) => {
+  try {
+    const id = req.params.id;
+    if (!validator.isUUID(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid question id",
+      });
+    }
+    const questionCheckQuery = `SELECT (question_id) FROM questions WHERE question_id=$1`;
+    const questionCheck = await pool.query(questionCheckQuery, [id]);
+    if (questionCheck.rowCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Question not found",
+      });
+    }
+    const fetchQuestionOptionsQuery = `SELECT * FROM question_option WHERE question_id=$1`;
+    const result = await pool.query(fetchQuestionOptionsQuery, [id]);
+    const questionOptions = result.rows;
+    return res.status(200).json({
+      success: true,
+      message: questionOptions.length
+        ? "Question options fetched successfully"
+        : "No options available for this question",
+      questionOptions,
+    });
+  } catch (error) {
+    console.error("Error fetching question options: ", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+const updateQuestionOption = async (req, res) => {
+  try {
+    const id = req.params.id;
+    const optionText = req.body.optionText?.trim();
+    const isCorrect = req.body.isCorrect;
+    if (!validator.isUUID(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid question Id",
+      });
+    }
+    let counter = 2;
+    const fields = [];
+    const values = [id];
+    if (optionText !== undefined) {
+      values.push(optionText);
+      fields.push(`option_text=$${counter++}`);
+    }
+    if (isCorrect !== undefined) {
+      values.push(isCorrect);
+      fields.push(`is_correct=$${counter++}`);
+    }
+    if (fields.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "No fields provided for update",
+      });
+    }
+    const updateQuestionOptionQuery = `
+    UPDATE question_option
+    SET ${fields.join(", ")}
+    WHERE option_id=$1
+    RETURNING *`;
+    console.log(updateQuestionOptionQuery);
+    const result = await pool.query(updateQuestionOptionQuery, values);
+    if (result.rowCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Option not found",
+      });
+    }
+    const updatedQuestionOption = result.rows[0];
+    return res.status(200).json({
+      success: true,
+      message: "Option updated successfully",
+      updatedQuestionOption,
+    });
+  } catch (error) {
+    console.error("Error updating question option: ", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+const deleteQuestionOption = async (req, res) => {
+  try {
+    const id = req.params.id;
+    if (!validator.isUUID(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid id",
+      });
+    }
+    const deleteOptionQuery = `DELETE FROM question_option WHERE option_id=$1 RETURNING *`;
+    const result = await pool.query(deleteOptionQuery, [id]);
+    if (result.rowCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Option not found",
+      });
+    }
+    const deletedOption = result.rows[0];
+    return res.status(200).json({
+      success: true,
+      message: "Option deleted successfully",
+      deletedOption,
+    });
+  } catch (error) {
+    console.error("Error updating question option: ", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
 module.exports = {
   addQuestion,
   fetchQuestions,
   fetchQuestionByID,
   deleteQuestion,
   updateQuestion,
+  fetchQuestionOptions,
+  createQuestionOption,
+  updateQuestionOption,
+  deleteQuestionOption,
 };
