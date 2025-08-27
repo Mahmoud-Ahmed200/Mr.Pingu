@@ -100,7 +100,7 @@ const fetchUsers = async (req, res) => {
 const fetchUserById = async (req, res) => {
   try {
     const { id } = req.params;
-    if (!id) {
+    if (!validator.isUUID(id)) {
       return res.status(400).json({
         success: false,
         message: "Invalid user ID",
@@ -136,49 +136,27 @@ const updateUser = async (req, res) => {
     const { id } = req.params;
     const username = req.body.username?.trim();
     const fullname = req.body.fullname?.trim();
-    if (!id) {
+    if (!validator.isUUID(id)) {
       return res.status(400).json({
         success: false,
         message: "Invalid user ID",
       });
     }
-    const userQuery = `SELECT user_id,email,username,fullname,xp,personal_photo,rank,strike,role,created_at
-     FROM users WHERE user_id=$1`;
-    const userResult = await pool.query(userQuery, [id]);
-    if (userResult.rowCount === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-    }
-    const user = userResult.rows[0];
     const fields = [];
     const values = [id];
-    const unChanged = {};
     let counter = 2;
     if (username !== undefined) {
-      if (user.username === username) {
-        unChanged["username"] =
-          "Username is already the current one, Nothing changed";
-      } else {
-        fields.push(`username=$${counter++}`);
-        values.push(username);
-      }
+      fields.push(`username=$${counter++}`);
+      values.push(username);
     }
     if (fullname !== undefined) {
-      if (user.fullname === fullname) {
-        unChanged["fullname"] =
-          "Fullname is already the current one, Nothing changed";
-      } else {
-        fields.push(`fullname=$${counter++}`);
-        values.push(fullname);
-      }
+      fields.push(`fullname=$${counter++}`);
+      values.push(fullname);
     }
     if (fields.length === 0) {
-      return res.status(200).json({
-        success: true,
-        message: "No changes detected",
-        user,
+      return res.status(400).json({
+        success: false,
+        message: "No fields provided for update",
       });
     }
     const update_query = `
@@ -187,12 +165,17 @@ const updateUser = async (req, res) => {
     WHERE user_id=$1
     RETURNING user_id,email,username,fullname,xp,personal_photo,rank,strike,role,created_at`;
     const result = await pool.query(update_query, values);
+    if (result.rowCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
     const updatedUser = result.rows[0];
     return res.status(200).json({
       success: true,
       message: "User data updated successfully",
       updatedUser,
-      unChanged,
     });
   } catch (error) {
     console.error("Error updating user:", error);
@@ -205,7 +188,7 @@ const updateUser = async (req, res) => {
 const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
-    if (!id) {
+    if (!validator.isUUID(id)) {
       return res.status(400).json({
         success: false,
         message: "Invalid user ID",
