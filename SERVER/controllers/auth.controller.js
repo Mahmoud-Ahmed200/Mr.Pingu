@@ -80,6 +80,7 @@ const signUp = async (req, res) => {
       message: "User signed up successfully",
       user,
     });
+
   } catch (error) {
     if (error.code === "23505") {
       if (error.detail.includes("email")) {

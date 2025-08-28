@@ -8,6 +8,7 @@ const port = process.env.PORT;
 const usersRouter = require("../routes/user.route");
 const skillRouter = require("../routes/skill.route");
 const authRouter = require("../routes/auth.route");
+const quizRouter = require("../Routes/quizzes.route")
 const { checkUser } = require("../middleware/auth.middleware");
 const { checkAdmin } = require("../middleware/admin.middleware");
 // Middleware
@@ -17,6 +18,7 @@ app.use(cookieparser());
 app.use("/auth", authRouter);
 app.use("/user", checkUser, usersRouter);
 app.use("/skill", checkUser, checkAdmin, skillRouter);
+app.use("/quiz",checkUser, quizRouter)
 // Server Start
 app.listen(port, () => {
   console.log(`Server listening on port ${port}`);

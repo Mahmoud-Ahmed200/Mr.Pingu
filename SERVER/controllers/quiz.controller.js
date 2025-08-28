@@ -12,8 +12,8 @@ const createQuiz = async (req, res) => {
     } = req.body;
 
     const quiz = await pool.query(
-      "INSERT INTO quizzes (quiz_id,title,  passing_score, total_score, xp_reward,time_limit) values ($1, $2, $3, $4, $5, $6) RETURNING *",
-      [quiz_id, title, passing_score, total_score, xp_reward, time_limit]
+      "INSERT INTO quizzes (title,  passing_score, total_score, xp_reward,time_limit) values ($1, $2, $3, $4, $5) RETURNING *",
+      [title, passing_score, total_score, xp_reward, time_limit]
     );
 
     if (quiz.rows.length == 0) {
@@ -46,7 +46,7 @@ const getAllQuizes = async (req, res) => {
 const getQuizById = async (req, res) => {
   try {
     const { quiz_id } = req.params;
-    
+
     if (!quiz_id) {
       return res.status(404).json("not valid quiz id");
     }
@@ -68,12 +68,30 @@ const getQuizById = async (req, res) => {
 const updateQuiz = async (req, res) => {
   try {
     const { quiz_id } = req.params;
+    const getQuery = `SELECT * FROM quizzes WHERE quiz_id=$1`;
+    const getquiz = await pool.query(getQuery, [quiz_id]);
 
     if (!quiz_id) {
       return res.status(404).json("not valid quiz id");
     }
-    const { title, passing_score, total_score, xp_reward, time_limit } =
+    let { title, passing_score, total_score, xp_reward, time_limit } =
       req.body;
+
+    if(!title){
+        title = getquiz.rows[0].title;
+    }if(!passing_score){
+        passing_score = getquiz.rows[0].passing_score;
+    } if(!total_score){
+        total_score = getquiz.rows[0].total_score;
+    } if(xp_reward){
+        xp_reward = getquiz.rows[0].xp_reward;
+    } if(!time_limit){
+        time_limit = getquiz.rows[0].time_limit;
+    }
+
+
+
+
     const quiz = await pool.query(
       "UPDATE quizzes SET title =$1 , passing_score=$2, total_score=$3, xp_reward=$4, time_limit=$5 WHERE quiz_id=$6 RETURNING *",
       [title, passing_score, total_score, xp_reward, time_limit, quiz_id]
