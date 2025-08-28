@@ -15,7 +15,7 @@ const createLesson = async (req, res) => {
     } = req.body;
 
     const newLesson = await pool.query(
-      "INSERT INTO lessons ( lesson_id, title,content_documented,course_id,quiz_id,xp,content_video) values($1, $2, $3, $4, $5, $6, $7)",
+      "INSERT INTO lessons ( lesson_id, title,content_documented,course_id,quiz_id,xp,content_video) values($1, $2, $3, $4, $5, $6, $7) RETURNING *",
       [
         lesson_id,
         title,
@@ -104,6 +104,15 @@ const deleteLesson = async (req,res) => {
     } catch (error) {
         
     }
+};
+
+
+module.exports = {
+  createLesson,
+  deleteLesson,
+  updateLesson,
+  getAllLessons,
+  getLessonById
 };
 
 

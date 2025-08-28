@@ -15,6 +15,7 @@ const validateCreateUser = ({ email, username, password, fullname, role }) => {
     return "Role must be either user or admin";
   return null;
 };
+
 const createUser = async (req, res) => {
   try {
     const email = req.body.email?.toLowerCase().trim();
