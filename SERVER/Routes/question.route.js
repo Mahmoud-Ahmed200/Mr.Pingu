@@ -1,0 +1,13 @@
+const express = require("express");
+const router = express.Router();
+const controller = require("../controllers/question.controller");
+router.post("/createQuestion", controller.addQuestion);
+router.get("/fetchQuestions", controller.fetchQuestions);
+router.get("/fetchQuestion/:id", controller.fetchQuestionByID);
+router.delete("/deleteQuestion/:id", controller.deleteQuestion);
+router.patch("/updateQuestion/:id", controller.updateQuestion);
+router.post("/:id/createQuestionOption", controller.createQuestionOption);
+router.get("/:id/fetchQuestionOptions", controller.fetchQuestionOptions);
+router.patch("/updateQuestionOption/:id", controller.updateQuestionOption);
+router.delete("/deleteQuestionOption/:id", controller.deleteQuestionOption);
+module.exports = router;

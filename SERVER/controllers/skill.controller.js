@@ -1,5 +1,5 @@
 const pool = require("../config/db");
-
+const validator = require("validator");
 const createSkill = async (req, res) => {
   try {
     const title = req.body.title?.trim();
@@ -36,47 +36,27 @@ const updateSkill = async (req, res) => {
     const { id } = req.params;
     const title = req.body.title?.trim();
     const xp = req.body.xp;
-    if (!id) {
+    if (id) {
       return res.status(400).json({
         success: false,
         message: "Invalid skill ID",
       });
     }
-    const skillQuery = `SELECT * FROM skills WHERE skill_id=$1`;
-    const skillQueryResult = await pool.query(skillQuery, [id]);
-    if (skillQueryResult.rowCount === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Skill not found",
-      });
-    }
-    const skill = skillQueryResult.rows[0];
     const fields = [];
     const values = [id];
-    const unChanged = {};
     let counter = 2;
     if (title !== undefined) {
-      if (title === skill.title) {
-        unChanged["title"] =
-          "Title is already the current one, Nothing changed";
-      } else {
-        fields.push(`title=$${counter++}`);
-        values.push(title);
-      }
+      fields.push(`title=$${counter++}`);
+      values.push(title);
     }
     if (xp !== undefined) {
-      if (xp === skill.xp) {
-        unChanged["xp"] = "XP is already the current one, Nothing changed";
-      } else {
-        fields.push(`xp=$${counter++}`);
-        values.push(xp);
-      }
+      fields.push(`xp=$${counter++}`);
+      values.push(xp);
     }
     if (fields.length === 0) {
-      return res.status(200).json({
-        success: true,
-        message: "No changes detected",
-        skill,
+      return res.status(400).json({
+        success: false,
+        message: "No fields provided for update",
       });
     }
     const updateQuery = `
@@ -85,12 +65,17 @@ const updateSkill = async (req, res) => {
     WHERE skill_id=$1
     RETURNING *`;
     const result = await pool.query(updateQuery, values);
+    if (result.rowCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Skill not found",
+      });
+    }
     const updatedSkill = result.rows[0];
     return res.status(200).json({
       success: true,
       message: "Skill data updated successfully",
       updatedSkill,
-      unChanged,
     });
   } catch (error) {
     console.error("Error updating skill:", error);
@@ -123,7 +108,7 @@ const fetchSkills = async (req, res) => {
 const fetchSkillById = async (req, res) => {
   try {
     const { id } = req.params;
-    if (!id) {
+    if (!validator.isUUID(id)) {
       return res.status(400).json({
         success: false,
         message: "Invalid skill ID",
@@ -157,7 +142,7 @@ const fetchSkillById = async (req, res) => {
 const deleteSkill = async (req, res) => {
   try {
     const { id } = req.params;
-    if (!id) {
+    if (!validator.isUUID(id)) {
       return res.status(400).json({
         success: false,
         message: "Invalid skill ID",
