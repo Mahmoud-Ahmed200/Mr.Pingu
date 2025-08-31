@@ -36,7 +36,7 @@ const updateSkill = async (req, res) => {
     const { id } = req.params;
     const title = req.body.title?.trim();
     const xp = req.body.xp;
-    if (id) {
+    if (!validator.isUUID(id)) {
       return res.status(400).json({
         success: false,
         message: "Invalid skill ID",

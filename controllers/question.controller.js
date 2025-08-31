@@ -200,6 +200,8 @@ const deleteQuestion = async (req, res) => {
     });
   }
 };
+
+//Question ↔ Option junction
 const createQuestionOption = async (req, res) => {
   try {
     const id = req.params.id;
@@ -299,7 +301,7 @@ const fetchQuestionOptions = async (req, res) => {
 };
 const updateQuestionOption = async (req, res) => {
   try {
-    const id = req.params.id;
+    const id = req.params.optionId;
     const optionText = req.body.optionText?.trim();
     const isCorrect = req.body.isCorrect;
     if (!validator.isUUID(id)) {
@@ -354,7 +356,7 @@ const updateQuestionOption = async (req, res) => {
 };
 const deleteQuestionOption = async (req, res) => {
   try {
-    const id = req.params.id;
+    const id = req.params.optionId;
     if (!validator.isUUID(id)) {
       return res.status(400).json({
         success: false,

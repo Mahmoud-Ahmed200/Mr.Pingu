@@ -130,20 +130,20 @@ const signIn = async (req, res) => {
         httpOnly: true,
         maxAge: maxAge * 1000,
       });
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         message: "User signed in successfully",
         user,
       });
     } else {
-      res.status(401).json({
+      return res.status(401).json({
         success: false,
         message: "Incorrect email or password",
       });
     }
   } catch (error) {
     console.error("Error signing in:", error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Internal server error",
     });

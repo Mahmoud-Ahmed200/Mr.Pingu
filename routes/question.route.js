@@ -1,13 +1,18 @@
 const express = require("express");
 const router = express.Router();
 const controller = require("../controllers/question.controller");
-router.post("/createQuestion", controller.addQuestion);
-router.get("/fetchQuestions", controller.fetchQuestions);
-router.get("/fetchQuestion/:id", controller.fetchQuestionByID);
-router.delete("/deleteQuestion/:id", controller.deleteQuestion);
-router.patch("/updateQuestion/:id", controller.updateQuestion);
-router.post("/:id/createQuestionOption", controller.createQuestionOption);
-router.get("/:id/fetchQuestionOptions", controller.fetchQuestionOptions);
-router.patch("/updateQuestionOption/:id", controller.updateQuestionOption);
-router.delete("/deleteQuestionOption/:id", controller.deleteQuestionOption);
+
+// Question Options (nested under a question)
+router.post("/:id/options", controller.createQuestionOption);
+router.get("/:id/options", controller.fetchQuestionOptions);
+router.patch("/options/:optionId", controller.updateQuestionOption);
+router.delete("/options/:optionId", controller.deleteQuestionOption);
+
+// Questions
+router.post("/", controller.addQuestion);
+router.get("/", controller.fetchQuestions);
+router.get("/:id", controller.fetchQuestionByID);
+router.patch("/:id", controller.updateQuestion);
+router.delete("/:id", controller.deleteQuestion);
+
 module.exports = router;

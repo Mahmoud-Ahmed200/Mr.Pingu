@@ -15,6 +15,8 @@ const validateCreateUser = ({ email, username, password, fullname, role }) => {
     return "Role must be either user or admin";
   return null;
 };
+
+// User CRUD
 const createUser = async (req, res) => {
   try {
     const email = req.body.email?.toLowerCase().trim();
@@ -219,6 +221,8 @@ const deleteUser = async (req, res) => {
     });
   }
 };
+
+// User ↔ Skills junction
 const fetchUserSkills = async (req, res) => {
   try {
     const user = req.user;
@@ -255,11 +259,13 @@ const addUserSkill = async (req, res) => {
     const user = req.user;
     const insertSkillQuery = `
     INSERT INTO SkillPerUser(user_id,skill_id)
-    VALUES($1,$2)`;
+    VALUES($1,$2)
+    RETURNING *`;
     const result = await pool.query(insertSkillQuery, [user.id, skillId]);
     return res.status(201).json({
       success: true,
       message: "Skill added successfully",
+      skill: result.rows[0],
     });
   } catch (error) {
     if (error.code === "23503") {
@@ -293,7 +299,10 @@ const deleteUserSkill = async (req, res) => {
       });
     }
     const user = req.user;
-    const deleteSkillQuery = `DELETE FROM SkillPerUser WHERE user_id=$1 and skill_id=$2`;
+    const deleteSkillQuery = `
+    DELETE FROM SkillPerUser
+    WHERE user_id=$1 and skill_id=$2
+    RETURNING * `;
     const result = await pool.query(deleteSkillQuery, [user.id, skillId]);
     if (result.rowCount === 0) {
       return res.status(404).json({
@@ -304,6 +313,7 @@ const deleteUserSkill = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Skill deleted successfully",
+      deletedSkill: result.rows[0],
     });
   } catch (error) {
     if (error.code === "23503") {
@@ -322,6 +332,292 @@ const deleteUserSkill = async (req, res) => {
   }
 };
 
+// User ↔ Quiz Attempts junction
+const createQuizAttempt = async (req, res) => {
+  try {
+    const user = req.user;
+    const quizId = req.params.quizId;
+    const score = req.body.score;
+    if (!validator.isUUID(quizId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid quiz Id",
+      });
+    }
+    if (score == null || isNaN(score) || score < 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid score",
+      });
+    }
+    const insertQuizAttemptQuery = `
+    INSERT INTO quizattempt (user_id,quiz_id,score)
+    VALUES($1,$2,$3)
+    RETURNING *`;
+    const result = await pool.query(insertQuizAttemptQuery, [
+      user.id,
+      quizId,
+      score,
+    ]);
+    const attempt = result.rows[0];
+    return res.status(201).json({
+      success: true,
+      message: "Attempt saved successfully",
+      attempt,
+    });
+  } catch (error) {
+    if (error.code === "23503") {
+      if (error.detail.includes("quiz_id")) {
+        return res.status(400).json({
+          success: false,
+          message: "Quiz not found",
+        });
+      }
+    }
+    console.error(error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+// User ↔ Course junction
+const getUserAttempts = async (req, res) => {
+  try {
+    const user = req.user;
+    const fetchAttemptsQuery = `SELECT * FROM quizattempt WHERE user_id=$1`;
+    const result = await pool.query(fetchAttemptsQuery, [user.id]);
+    const attempts = result.rows;
+    return res.status(200).json({
+      success: true,
+      message: attempts.length
+        ? "Quiz attempts fetched successfully"
+        : "User doesn't have attempted quizzes",
+      count: attempts.length,
+      attempts,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+const enrollUser = async (req, res) => {
+  try {
+    const { course_id } = req.params;
+    const user_id = req.user.id;
+    if (!validator.isUUID(course_id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid course id",
+      });
+    }
+    const enroll = await pool.query(
+      "INSERT INTO coursesperuser (course_id, user_id) VALUES ($1, $2) RETURNING *",
+      [course_id, user_id]
+    );
+
+    if (enroll.rowCount === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Incorrect enrollment",
+      });
+    }
+    return res.status(200).json({
+      success: true,
+      message: "User enrolled to course successfully",
+      enroll: enroll.rows[0],
+    });
+  } catch (error) {
+    if (error.code === "23503") {
+      if (error.detail.includes("course_id")) {
+        return res.status(404).json({
+          success: false,
+          message: "Course not found",
+        });
+      }
+    }
+    if (error.code === "23505") {
+      return res.status(400).json({
+        success: false,
+        message: "User already enrolled to this course",
+      });
+    }
+    console.error(error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+const getUserCourses = async (req, res) => {
+  try {
+    const user_id = req.user.id;
+    const course = await pool.query(
+      `SELECT cu.course_id,c.title,c.description,c.category,cu.enrolled_at
+       FROM coursesperuser cu
+       JOIN courses c ON c.course_id=cu.course_id
+       WHERE cu.user_id=$1`,
+      [user_id]
+    );
+    return res.status(200).json({
+      success: true,
+      message: course.rows.length
+        ? "Enrolled courses fetched successfully"
+        : "User isn't enrolled in any course yet",
+      count: course.rowCount,
+      enrolled: course.rows,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+// User ↔ Lesson junction
+const createLessonProgress = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const lessonId = req.params.lesson_id;
+    if (!validator.isUUID(lessonId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid lesson id",
+      });
+    }
+    const createLessonProgressQueue = `
+    INSERT INTO lessonprogress (user_id,lesson_id)
+    VALUES($1,$2)
+    RETURNING *`;
+    const result = await pool.query(createLessonProgressQueue, [
+      userId,
+      lessonId,
+    ]);
+    const lessonProgress = result.rows[0];
+    return res.status(201).json({
+      success: true,
+      message: "Lesson progress created successfully",
+      lessonProgress,
+    });
+  } catch (error) {
+    if (error.code === "23503") {
+      if (error.detail.includes("lesson_id")) {
+        return res.status(404).json({
+          success: false,
+          message: "Lesson not found",
+        });
+      }
+    }
+    if (error.code === "23505") {
+      return res.status(400).json({
+        success: false,
+        message: "User already progressed on this lesson",
+      });
+    }
+    console.error(error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+const updateLessonProgress = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const lessonId = req.params.lesson_id;
+    if (!validator.isUUID(lessonId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid lesson id",
+      });
+    }
+    const updateLessonProgressQueue = `
+    UPDATE lessonprogress
+    SET progress='completed'
+    WHERE user_id=$1 AND lesson_id=$2
+    RETURNING *`;
+    const result = await pool.query(updateLessonProgressQueue, [
+      userId,
+      lessonId,
+    ]);
+    const updatedLessonProgress = result.rows[0];
+    return res.status(200).json({
+      success: true,
+      message: "Lesson progress updated successfully",
+      updatedLessonProgress,
+    });
+  } catch (error) {
+    console.error("error updating lesson progress", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+const getLessonsProgress = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const getLessonsProgressQuery = `
+     SELECT lp.user_id,lp.lesson_id,l.title,lp.progress
+    FROM lessonprogress lp
+    JOIN lessons l ON lp.lesson_id=l.lesson_id 
+     WHERE user_id=$1
+   `;
+    const result = await pool.query(getLessonsProgressQuery, [userId]);
+    const lessonsProgress = result.rows;
+    return res.status(200).json({
+      success: true,
+      message: lessonsProgress.length
+        ? "Lesson progress fetched successfully"
+        : "No lessons progress found",
+      lessonsProgress,
+    });
+  } catch (error) {
+    console.error("Error fetching lessons progress", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+const getLessonProgress = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const lessonId = req.params.lesson_id;
+    if (!validator.isUUID(lessonId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid lesson id",
+      });
+    }
+    const getLessonProgressQuery = `
+    SELECT lp.user_id,lp.lesson_id,l.title,lp.progress
+    FROM lessonprogress lp
+    JOIN lessons l ON lp.lesson_id=l.lesson_id 
+    WHERE lp.user_id=$1 AND lp.lesson_id=$2
+   `;
+    const result = await pool.query(getLessonProgressQuery, [userId, lessonId]);
+    const lessonProgress = result.rows[0];
+    return res.status(200).json({
+      success: true,
+      message: "Lesson progress fetched successfully",
+      lessonProgress,
+    });
+  } catch (error) {
+    console.error("Error fetching lesson progress", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
 module.exports = {
   fetchUsers,
   fetchUserById,
@@ -331,4 +627,12 @@ module.exports = {
   fetchUserSkills,
   addUserSkill,
   deleteUserSkill,
+  createQuizAttempt,
+  getUserAttempts,
+  enrollUser,
+  getUserCourses,
+  createLessonProgress,
+  updateLessonProgress,
+  getLessonsProgress,
+  getLessonProgress,
 };
