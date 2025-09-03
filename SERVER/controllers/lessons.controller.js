@@ -12,10 +12,13 @@ const createLesson = async (req, res) => {
       quiz_id,
       xp,
       content_video,
+      prerequisite_lesson_id, 
     } = req.body;
 
     const newLesson = await pool.query(
-      "INSERT INTO lessons ( lesson_id, title,content_documented,course_id,quiz_id,xp,content_video) values($1, $2, $3, $4, $5, $6, $7) RETURNING *",
+      `INSERT INTO lessons 
+       (lesson_id, title, content_documented, course_id, quiz_id, xp, content_video, prerequisite_lesson_id) 
+       VALUES($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
       [
         lesson_id,
         title,
@@ -24,6 +27,7 @@ const createLesson = async (req, res) => {
         quiz_id,
         xp,
         content_video,
+        prerequisite_lesson_id || null,
       ]
     );
 
@@ -33,6 +37,7 @@ const createLesson = async (req, res) => {
     res.status(500).json("server error");
   }
 };
+
 
 const getAllLessons = async (req, res) => {
   try {

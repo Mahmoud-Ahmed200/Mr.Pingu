@@ -14,10 +14,24 @@ const getAllCourses = async (req, res) => {
 
 const addCourse = async (req, res) => {
   try {
-    const { course_id, title, category, description } = req.body;
+    const { course_id, title, category, description, is_paid, price } =
+      req.body;
+
+    if (is_paid && (price === undefined || price === null)) {
+      return res.status(400).json("Price is required for paid courses");
+    }
+
     const newCourse = await db.con.query(
-      "INSERT INTO courses (course_id, title, category, description) values ($1, $2, $3, $4) RETURNING *",
-      [course_id, title, category, description]
+      `INSERT INTO courses (course_id, title, category, description, is_paid, price) 
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [
+        course_id,
+        title,
+        category,
+        description,
+        is_paid || false,
+        is_paid ? price : null,
+      ]
     );
 
     res.status(200).json(newCourse.rows[0]);
@@ -26,6 +40,7 @@ const addCourse = async (req, res) => {
     res.status(500).json("server error");
   }
 };
+
 
 const deleteCourse = async (req, res) => {
   try {
@@ -65,15 +80,28 @@ const getCourse = async (req, res) => {
 const updateCourse = async (req, res) => {
   try {
     const { course_id } = req.params;
-    const { title, category, description } = req.body;
+    const { title, category, description, is_paid, price } = req.body;
+
+    if (is_paid && (price === undefined || price === null)) {
+      return res.status(400).json("Price is required for paid courses");
+    }
+
     const course = await db.con.query(
       `UPDATE courses 
-       SET title = $1, category = $2, description = $3 
-       WHERE course_id = $4 
+       SET title = $1, category = $2, description = $3, is_paid = $4, price = $5 
+       WHERE course_id = $6 
        RETURNING *`,
-      [title, category, description, course_id]
+      [
+        title,
+        category,
+        description,
+        is_paid || false,
+        is_paid ? price : null,
+        course_id,
+      ]
     );
-    if (course.rows.length) {
+
+    if (course.rows.length === 0) {
       return res.status(404).json("Course not found");
     }
 
@@ -83,6 +111,7 @@ const updateCourse = async (req, res) => {
     res.status(500).json("server error");
   }
 };
+
 
 module.exports = {
   getAllCourses,
