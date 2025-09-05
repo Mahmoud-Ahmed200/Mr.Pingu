@@ -37,7 +37,6 @@ Mr.Pingu is a next-generation e-learning platform that blends **structured educa
 MrPingu/
 │── client/          # React frontend
 │── server/          # Node.js backend
-│── docs/            # Documentation
 │── README.md        # Project readme
 ```
 
@@ -48,7 +47,7 @@ MrPingu/
 1. **Clone the repository**
 
    ```bash
-   git clone https://github.com/your-username/mrpingu.git
+   git clone https://github.com/Mahmoud-Ahmed200/Mr.Pingu
    cd mrpingu
    ```
 
