@@ -25,7 +25,7 @@ app.use("/user", checkUser, usersRouter);
 app.use("/skill", skillRouter);
 app.use("/question", checkUser, checkAdmin, questionRouter);
 app.use("/quiz", checkUser, checkAdmin, quizRouter);
-app.use("/course", checkUser, checkAdmin, courseRouter);
+app.use("/course", courseRouter);
 app.use("/lesson", checkUser, checkAdmin, lessonRouter);
 // Server Start
 app.listen(port, () => {
