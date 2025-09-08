@@ -22,7 +22,7 @@ app.use(cookieparser());
 // Routes
 app.use("/auth", authRouter);
 app.use("/user", checkUser, usersRouter);
-app.use("/skill", checkUser, checkAdmin, skillRouter);
+app.use("/skill", skillRouter);
 app.use("/question", checkUser, checkAdmin, questionRouter);
 app.use("/quiz", checkUser, checkAdmin, quizRouter);
 app.use("/course", checkUser, checkAdmin, courseRouter);
