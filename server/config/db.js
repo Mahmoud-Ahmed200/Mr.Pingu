@@ -15,3 +15,4 @@ pool.query('SELECT NOW()', (err, res) => {
     console.log('Database connected successfully');
   }
 });
+module.exports=pool
