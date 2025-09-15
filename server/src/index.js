@@ -1,6 +1,7 @@
 // Load environment variables
 require("dotenv").config();
 
+const cors = require("cors");
 const express = require("express");
 const cookieparser = require("cookie-parser");
 const app = express();
@@ -17,6 +18,14 @@ const lessonRouter = require("../routes/lessons.route");
 const { checkUser } = require("../middleware/auth.middleware");
 const { checkAdmin } = require("../middleware/auth.middleware");
 // Middleware
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 app.use(express.json());
 app.use(cookieparser());
 // Routes
